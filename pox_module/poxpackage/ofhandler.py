@@ -63,13 +63,50 @@ class RouterInfo(Event):
 class OFHandler (EventMixin):
   def __init__ (self, connection, transparent):
     # Switch we'll be adding L2 learning switch capabilities to
+    hwinfos = {}
+    self.connection = connection
+    self.transparent = transparent
+    self.sw_info = {}
+    self.connection.send(of.ofp_switch_config(miss_send_len = 65535))
+    for port in connection.features.ports:
+        intf_name = port.name.split('-')
+        if(len(intf_name) < 2):
+          continue
+        else:
+          intf_name = intf_name[1]
+        hwinfos.setdefault(intf_name, port.hw_addr.toStr())
+        if intf_name in ROUTER_IP.keys():
+          self.sw_info[intf_name] = (ROUTER_IP[intf_name], port.hw_addr.toStr(), '10Gbps', port.port_no)
+    output = open("./HWINFOS_TEMP", "w")
+    output.write(json.dumps(hwinfos))
+    output.close()
+    self.rtable = RTABLE
+    # We want to hear Openflow PacketIn messages, so we listen
+    self.listenTo(connection)
+    self.listenTo(core.poxpackage_srhandler)
+    core.poxpackage_ofhandler.raiseEvent(RouterInfo(self.sw_info, self.rtable))
 
   def _handle_PacketIn (self, event):
     """
     Handles packet in messages from the switch to implement above algorithm.
     """
+    pkt = event.parse()
+    raw_packet = pkt.raw
+    core.poxpackage_ofhandler.raiseEvent(SRPacketIn(raw_packet, event.port))
+    msg = of.ofp_packet_out()
+    msg.buffer_id = event.ofp.buffer_id
+    msg.in_port = event.port
+    self.connection.send(msg)
+
 
   def _handle_SRPacketOut(self, event):
+    msg = of.ofp_packet_out()
+    new_packet = event.pkt
+    msg.actions.append(of.ofp_action_output(port=event.port))
+    msg.buffer_id = -1
+    msg.in_port = of.OFPP_NONE
+    msg.data = new_packet
+    self.connection.send(msg)
 
 class SRPacketIn(Event):
   '''Event to raise upon a receive a packet_in from openflow'''
@@ -83,6 +120,7 @@ class poxpackage_ofhandler (EventMixin):
   """
   Waits for OpenFlow switches to connect and makes them learning switches.
   """
+  _eventMixin_events = set([SRPacketIn, RouterInfo])
 
   def __init__ (self, transparent):
     EventMixin.__init__(self)
@@ -96,9 +134,39 @@ class poxpackage_ofhandler (EventMixin):
 
 
 def get_ip_setting():
+  if (not os.path.isfile(IPCONFIG_FILE)):
+    return -1
+  f = open(IPCONFIG_FILE, 'r')
+  for line in f:
+    if(len(line.split()) == 0):
+      break
+    name, ip = line.split()
+    if ip == "<ELASTIC_IP>":
+      log.info("ip configuration is not set, please put your Elastic IP addresses into %s" % IPCONFIG_FILE)
+      sys.exit(2)
+    #print name, ip
+    IP_SETTING[name] = ip
+
+  RTABLE.append( ('%s' % IP_SETTING['client'], '%s' % IP_SETTING['client'], '255.255.255.255', 'eth3') )
+  RTABLE.append( ('%s' % IP_SETTING['server1'], '%s' % IP_SETTING['server1'], '255.255.255.255', 'eth1') )
+  RTABLE.append( ('%s' % IP_SETTING['server2'], '%s' % IP_SETTING['server2'], '255.255.255.255', 'eth2') )
+
+
+  ROUTER_IP['eth1'] = '%s' % IP_SETTING['sw0-eth1']
+  ROUTER_IP['eth2'] = '%s' % IP_SETTING['sw0-eth2']
+  ROUTER_IP['eth3'] = '%s' % IP_SETTING['sw0-eth3']
+  return 0
 
 
 def launch (transparent=False):
   """
   Starts an Simple Router Topology
-  """
+  """    
+  core.registerNew(poxpackage_ofhandler, str_to_bool(transparent))
+  
+  r = get_ip_setting()
+  if r == -1:
+    log.debug("Couldn't load config file for ip addresses, check whether %s exists" % IPCONFIG_FILE)
+    sys.exit(2)
+  else:
+    log.debug('*** ofhandler: Successfully loaded ip settings for hosts\n %s\n' % IP_SETTING)
