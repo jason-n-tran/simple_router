@@ -1,0 +1,3 @@
+router/*.d
+router/*.o
+router/sr
