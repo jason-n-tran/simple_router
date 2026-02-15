@@ -14,20 +14,8 @@ services:
     cap_drop:
       - ALL
 
-    security_opt:
-      - no-new-privileges:true
-      - seccomp=unconfined
-    
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 2G
-        reservations:
-          cpus: '0.25'
-          memory: 512M
-    
-    read_only: true
+    privileged: true
+    read_only: false
     tmpfs:
       - /tmp
       - /run
