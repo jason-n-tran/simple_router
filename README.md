@@ -1,7 +1,7 @@
 # Simple Router Network Simulator
 
 <!-- LOGO placeholder: Consider adding a network topology diagram or project icon here -->
-
+[![Live Demo](https://img.shields.io/badge/Demo-Live_Preview-0078D4?logo=google-chrome&logoColor=white)](http://simplerouter-simplerouter-cvoi4f-bbc805-72-61-1-6.traefik.me)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Language](https://img.shields.io/badge/language-C%20|%20Python-orange.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-brightgreen.svg)
