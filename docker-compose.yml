@@ -21,6 +21,7 @@ services:
       - /run
     volumes:
       - .:/app
+      - /lib/modules:/lib/modules
       - ovs-data:/var/lib/openvswitch
       - ovs-run:/var/run/openvswitch
       - ovs-logs:/var/log/openvswitch
