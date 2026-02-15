@@ -141,7 +141,8 @@ def net():
         set_default_route(host)
     starthttp( server1 )
     starthttp( server2 )
-    CLI( net )
+    from restricted_cli import RestrictedCLI
+    RestrictedCLI( net )
     stophttp()
     net.stop()
 

@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  simple_router:
+    build: .
+    image: simple_router:latest
+    container_name: simple_router_demo
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
+      - SYS_ADMIN
+      - NET_BIND_SERVICE
+    cap_drop:
+      - ALL
+
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=unconfined
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    volumes:
+      - .:/app
+      - ovs-data:/var/lib/openvswitch
+      - ovs-run:/var/run/openvswitch
+      - ovs-logs:/var/log/openvswitch
+      - ovs-etc:/etc/openvswitch
+      
+    ports:
+      - "8070:8070"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      
+    # SECURITY: Network isolation
+    network_mode: bridge
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8070/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      
+    # Fix CRLF issues from bind mount (Windows host) before running
+    entrypoint: /bin/bash -c "dos2unix entrypoint.sh && chmod +x entrypoint.sh && ./entrypoint.sh"
+
+volumes:
+  ovs-data:
+  ovs-run:
+  ovs-logs:
+  ovs-etc:

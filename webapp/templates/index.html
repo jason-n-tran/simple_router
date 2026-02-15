@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Router Simulation</title>
+    <!-- Xterm.js CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="header">
+                <h2>Simple Router</h2>
+                <p>Interactive Demo</p>
+            </div>
+
+            <div class="commands-section">
+                <h3>Basic Connectivity (Ping)</h3>
+                <div class="command-group">
+                    <label>Client -> Severs</label>
+                    <button onclick="runCommand('client ping -c 3 192.168.2.2')">Ping Server1</button>
+                    <button onclick="runCommand('client ping -c 3 172.64.3.10')">Ping Server2</button>
+                </div>
+                <div class="command-group">
+                    <label>Client -> Router Interfaces</label>
+                    <button onclick="runCommand('client ping -c 3 10.0.1.1')">Ping Router (Eth3)</button>
+                    <button onclick="runCommand('client ping -c 3 192.168.2.1')">Ping Router (Eth1)</button>
+                    <button onclick="runCommand('client ping -c 3 172.64.3.1')">Ping Router (Eth2)</button>
+                </div>
+
+                <h3>Advanced (Traceroute & ARP)</h3>
+                <div class="command-group">
+                    <label>Traceroute</label>
+                    <button onclick="runCommand('client traceroute -n 192.168.2.2')">Trace to Server1</button>
+                    <button onclick="runCommand('client traceroute -n 172.64.3.10')">Trace to Server2</button>
+                </div>
+                <div class="command-group">
+                    <label>ARP Requests</label>
+                    <button onclick="runCommand('client arping -c 3 10.0.1.1')">ARP Router (from Client)</button>
+                    <button onclick="runCommand('server1 arping -c 3 192.168.2.1')">ARP Router (from S1)</button>
+                </div>
+
+                <h3>Application Layer (Wget)</h3>
+                <div class="command-group">
+                    <label>HTTP Download</label>
+                    <button onclick="runCommand('client wget -T 5 http://192.168.2.2')">Wget Server1</button>
+                    <button onclick="runCommand('client wget -T 5 http://172.64.3.10')">Wget Server2</button>
+                </div>
+
+                <h3>Error Handling Tests</h3>
+                <div class="command-group">
+                    <label>ICMP Errors</label>
+                    <button onclick="runCommand('client ping -c 3 -t 1 192.168.2.2')">TTL Exceeded Test</button>
+                    <button onclick="runCommand('client ping -c 3 10.0.1.2')">Unreachable IP Test</button>
+                </div>
+
+                <div class="command-group">
+                    <label>System</label>
+                    <button onclick="runCommand('nodes')" class="secondary">List Nodes</button>
+                    <button onclick="runCommand('net')" class="secondary">Show Network</button>
+                    <button onclick="runCommand('help')" class="secondary">Help</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="terminal-container">
+            <div id="terminal"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+
+    <script>
+        // Terminal Setup
+        const term = new Terminal({
+            cursorBlink: true,
+            theme: {
+                background: '#1e1e1e',
+                foreground: '#ffffff',
+                cursor: '#00ff00'
+            },
+            fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+            fontSize: 14
+        });
+
+        const fitAddon = new FitAddon.FitAddon();
+        term.loadAddon(fitAddon);
+
+        term.open(document.getElementById('terminal'));
+        fitAddon.fit();
+
+        // SocketIO Setup
+        const socket = io();
+
+        socket.on('connect', () => {
+            console.log('Connected to backend');
+            term.write('\r\n\x1b[32mWebsite Connected. Starting Mininet...\x1b[0m\r\n');
+        });
+
+        // Receive data from backend -> write to terminal
+        socket.on('term_output', (data) => {
+            term.write(data.output);
+        });
+
+        // Send terminal input -> backend
+        term.onData((data) => {
+            socket.emit('term_input', { input: data });
+        });
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            fitAddon.fit();
+            socket.emit('resize', { cols: term.cols, rows: term.rows });
+        });
+
+        // Initial resize
+        setTimeout(() => {
+            fitAddon.fit();
+            socket.emit('resize', { cols: term.cols, rows: term.rows });
+        }, 100);
+
+        // Helper to run commands from buttons
+        window.runCommand = function (cmd) {
+            socket.emit('term_input', { input: cmd + '\n' });
+            term.focus();
+        };
+    </script>
+</body>
+
+</html>
