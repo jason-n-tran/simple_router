@@ -9,7 +9,11 @@ service openvswitch-switch start
 
 # Fix permissions
 chmod +x pox/pox.py
-chmod +x router/sr
+
+# Rebuild router in case it's missing (volume mount overwrite)
+echo "Building router..."
+cd router && make && cd ..
+
 
 # 1. Start POX controller
 echo "Starting POX..."
