@@ -37,7 +37,7 @@ done
 echo "Starting Mininet Topology..."
 
 # Cleanup mininet first just in case
-mn -c > /dev/null 2>&1
+timeout 10s mn -c > /dev/null 2>&1 || true
 
 # We'll run topo.py in the background, but we need to keep its stdin open or connected to the terminal?
 # The problem: If we run it in foreground, we can't run step 3.
