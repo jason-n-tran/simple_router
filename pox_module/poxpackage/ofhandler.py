@@ -129,7 +129,12 @@ class poxpackage_ofhandler (EventMixin):
 
   def _handle_ConnectionUp (self, event):
     log.debug("Connection %s" % (event.connection,))
-    OFHandler(event.connection, self.transparent)
+    try:
+      OFHandler(event.connection, self.transparent)
+    except:
+      import traceback
+      traceback.print_exc()
+      log.error("Failed to initialize OFHandler", exc_info=True)
 
 
 
