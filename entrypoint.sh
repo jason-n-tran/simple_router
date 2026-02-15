@@ -7,6 +7,10 @@ export PYTHONPATH=$PYTHONPATH:/app:/app/pox_module
 # Start OpenVSwitch service
 service openvswitch-switch start
 
+# Fix permissions
+chmod +x pox/pox.py
+chmod +x router/sr
+
 # 1. Start POX controller
 echo "Starting POX..."
 ./pox/pox.py --no-cli poxpackage.ofhandler poxpackage.srhandler 2>&1 &
