@@ -9,9 +9,19 @@ service openvswitch-switch start
 
 # 1. Start POX controller
 echo "Starting POX..."
-./pox/pox.py --no-cli poxpackage.ofhandler poxpackage.srhandler > pox.log 2>&1 &
+./pox/pox.py --no-cli poxpackage.ofhandler poxpackage.srhandler 2>&1 &
 POX_PID=$!
-sleep 5
+
+# Wait for Controller to listen on 6633
+echo "Waiting for POX controller..."
+for i in {1..20}; do
+    if netstat -tln | grep -q :6633; then
+        echo "POX is up and listening on 6633."
+        break
+    fi
+    echo "Waiting for POX (attempt $i)..."
+    sleep 1
+done
 
 # 2. Start Mininet Topology (Background first)
 # We need to start Mininet, let it initialize enough so we can start the router,
