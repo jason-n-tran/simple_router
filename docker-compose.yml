@@ -34,9 +34,6 @@ services:
       - PYTHONUNBUFFERED=1
       - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
-      
-    # SECURITY: Network isolation
-    network_mode: bridge
     
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8070/"]
